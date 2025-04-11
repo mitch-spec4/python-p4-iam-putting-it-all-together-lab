@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python3
 
 from flask import request, session
@@ -19,17 +18,12 @@ def check_if_logged_in():
     if (request.endpoint) not in open_access_list and (not session.get('user_id')):
         return {'error': '401 Unauthorized'}, 401
 
-
 class Signup(Resource):
-    
     def post(self):
-
-        request_json = request.get_json()
-
-        username = request_json.get('username')
-        password = request_json.get('password')
-        image_url = request_json.get('image_url')
-        bio = request_json.get('bio')
+        username = request.get_json().get('username')
+        password = request.get_json().get('password')
+        image_url = request.get_json().get('image_url')
+        bio = request.get_json().get('bio')
 
         user = User(
             username=username,
@@ -37,26 +31,20 @@ class Signup(Resource):
             bio=bio
         )
 
-        # the setter will encrypt this
         user.password_hash = password
 
         try:
-
             db.session.add(user)
             db.session.commit()
-
             session['user_id'] = user.id
-
             return user.to_dict(), 201
-
+        
         except IntegrityError:
 
             return {'error': '422 Unprocessable Entity'}, 422
 
 class CheckSession(Resource):
-
     def get(self):
-        
         user_id = session['user_id']
         if user_id:
             user = User.query.filter(User.id == user_id).first()
@@ -64,67 +52,51 @@ class CheckSession(Resource):
         
         return {}, 401
 
-
 class Login(Resource):
-    
     def post(self):
-
-        request_json = request.get_json()
-
-        username = request_json.get('username')
-        password = request_json.get('password')
+        username = request.get_json()['username']
+        password = request.get_json()['password']
 
         user = User.query.filter(User.username == username).first()
 
         if user:
             if user.authenticate(password):
-
                 session['user_id'] = user.id
                 return user.to_dict(), 200
-
+        
         return {'error': '401 Unauthorized'}, 401
 
 class Logout(Resource):
-
     def delete(self):
-
         session['user_id'] = None
-        
         return {}, 204
-        
 
 class RecipeIndex(Resource):
-
+    
     def get(self):
-
         user = User.query.filter(User.id == session['user_id']).first()
-        return [recipe.to_dict() for recipe in user.recipes], 200
-        
-        
+        recipes = [recipe.to_dict() for recipe in user.recipes]
+        return recipes, 200
+    
     def post(self):
-
-        request_json = request.get_json()
-
-        title = request_json['title']
-        instructions = request_json['instructions']
-        minutes_to_complete = request_json['minutes_to_complete']
+        title = request.get_json()['title']
+        instructions = request.get_json()['instructions']
+        minutes_to_complete = request.get_json()['minutes_to_complete']
 
         try:
-
             recipe = Recipe(
                 title=title,
                 instructions=instructions,
                 minutes_to_complete=minutes_to_complete,
-                user_id=session['user_id'],
+                user_id = session['user_id'],
             )
 
             db.session.add(recipe)
             db.session.commit()
 
             return recipe.to_dict(), 201
-
+        
         except IntegrityError:
-
             return {'error': '422 Unprocessable Entity'}, 422
 
 
